@@ -19,6 +19,7 @@
       <div v-else class="movie-grid">
         <div v-for="movie in movies" :key="movie.id" class="movie-card" @click="navigateToMovie(movie.id)">
           <img :src="getImageUrl(movie.poster_path)" :alt="movie.title">
+          <FavoriteButton :movie="movie" />
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
             <div class="meta">
@@ -51,6 +52,7 @@ import axios from 'axios'
 import SearchBar from '../components/SearchBar.vue'
 import Pagination from '../components/Pagination.vue'
 import SortSelect from '../components/SortSelect.vue'
+import FavoriteButton from '../components/FavoriteButton.vue'
 
 const router = useRouter()
 const movies = ref([])

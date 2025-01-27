@@ -1,6 +1,9 @@
 <script setup>
 import { useRoute } from 'vue-router'
+import { useFavoritesStore } from './stores/favorites'
+
 const route = useRoute()
+const favoritesStore = useFavoritesStore()
 </script>
 
 <template>
@@ -12,6 +15,12 @@ const route = useRoute()
       <div class="navbar-menu">
         <router-link to="/" class="nav-item" :class="{ active: route.path === '/' }">ホーム</router-link>
         <router-link to="/movies" class="nav-item" :class="{ active: route.path === '/movies' }">映画</router-link>
+        <router-link to="/favorites" class="nav-item" :class="{ active: route.path === '/favorites' }">
+          お気に入り
+          <span v-if="favoritesStore.favorites.length" class="favorite-count">
+            {{ favoritesStore.favorites.length }}
+          </span>
+        </router-link>
       </div>
     </nav>
     <router-view></router-view>
@@ -69,10 +78,38 @@ body {
   padding: 0.5rem 1rem;
   transition: color 0.3s ease;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .nav-item:hover,
 .nav-item.active {
   color: var(--primary-color);
+}
+
+.favorite-count {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  min-width: 20px;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .navbar {
+    padding: 1rem;
+  }
+
+  .navbar-brand .logo {
+    font-size: 1.5rem;
+  }
+
+  .nav-item {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
 }
 </style>

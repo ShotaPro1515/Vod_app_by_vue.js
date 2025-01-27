@@ -79,7 +79,6 @@ onMounted(() => {
 }
 
 input {
-  width: 100%;
   padding: 0.8rem 1rem 0.8rem 2.5rem;
   border: none;
   border-radius: 4px;

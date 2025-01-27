@@ -10,11 +10,17 @@
       <div class="movie-grid">
         <div v-for="movie in movies" :key="movie.id" class="movie-card" @click="navigateToMovie(movie.id)">
           <img :src="getImageUrl(movie.poster_path)" :alt="movie.title">
+          <FavoriteButton :movie="movie" />
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
-            <div class="rating">
-              <span class="mdi mdi-star"></span>
-              {{ movie.vote_average.toFixed(1) }}
+            <div class="meta">
+              <div class="rating">
+                <span class="mdi mdi-star"></span>
+                {{ movie.vote_average.toFixed(1) }}
+              </div>
+              <div class="year" v-if="movie.release_date">
+                {{ new Date(movie.release_date).getFullYear() }}
+              </div>
             </div>
           </div>
         </div>
@@ -27,6 +33,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import FavoriteButton from '../components/FavoriteButton.vue'
 
 const router = useRouter()
 const movies = ref([])
@@ -44,7 +51,6 @@ const fetchMovies = async () => {
       }
     })
     movies.value = response.data.results
-    
   } catch (error) {
     console.error('Error fetching movies:', error)
   }
@@ -81,6 +87,8 @@ onMounted(() => {
 
 .movie-section {
   margin-bottom: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .movie-section h2 {
@@ -89,7 +97,7 @@ onMounted(() => {
 
 .movie-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
@@ -97,6 +105,9 @@ onMounted(() => {
   position: relative;
   cursor: pointer;
   transition: transform 0.3s ease;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .movie-card:hover {
@@ -105,9 +116,8 @@ onMounted(() => {
 
 .movie-card img {
   width: 100%;
-  height: 300px;
+  height: 360px;
   object-fit: cover;
-  border-radius: 8px;
 }
 
 .movie-info {
@@ -115,24 +125,60 @@ onMounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 10px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  border-radius: 0 0 8px 8px;
+  padding: 15px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
 }
 
 .movie-info h3 {
   margin: 0;
   font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
 }
 
 .rating {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-top: 5px;
 }
 
 .rating .mdi-star {
   color: #ffd700;
+}
+
+.year {
+  color: #aaa;
+}
+
+@media (max-width: 1200px) {
+  .movie-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .movie-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .movie-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .movie-card img {
+    height: 400px;
+  }
+
+  .hero-section h1 {
+    font-size: 2rem;
+  }
 }
 </style> 
