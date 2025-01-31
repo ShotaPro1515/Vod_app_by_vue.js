@@ -3,9 +3,18 @@
     <div class="backdrop" :style="{ backgroundImage: `url(${getImageUrl(movie.backdrop_path, 'original')})` }">
       <div class="overlay">
         <div class="content">
-          <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" class="poster">
+          <div class="poster-container">
+            <img :src="getImageUrl(movie.poster_path)" :alt="movie.title" class="poster">
+            <FavoriteButton :movie="movie" class="detail-favorite-button" />
+          </div>
           <div class="info">
-            <h1>{{ movie.title }}</h1>
+            <div class="title-section">
+              <h1>{{ movie.title }}</h1>
+              <button v-if="trailerKey" @click="showTrailer = true" class="trailer-button">
+                <span class="mdi mdi-play"></span>
+                トレーラーを再生
+              </button>
+            </div>
             <div class="meta">
               <span class="rating">
                 <span class="mdi mdi-star"></span>
@@ -20,6 +29,20 @@
               <span v-for="genre in movie.genres" :key="genre.id" class="genre-tag">
                 {{ genre.name }}
               </span>
+            </div>
+            <div class="rating-section">
+              <h3>この映画を評価する</h3>
+              <div class="star-rating">
+                <button 
+                  v-for="star in 5" 
+                  :key="star"
+                  class="star-button"
+                  :class="{ active: userRating >= star }"
+                  @click="setRating(star)"
+                >
+                  <span class="mdi mdi-star"></span>
+                </button>
+              </div>
             </div>
             <div class="additional-info">
               <div class="info-item">
@@ -62,25 +85,52 @@
       <div class="similar-grid">
         <div v-for="movie in similarMovies" :key="movie.id" class="movie-card" @click="loadMovie(movie.id)">
           <img :src="getImageUrl(movie.poster_path)" :alt="movie.title">
+          <FavoriteButton :movie="movie" />
           <div class="movie-info">
             <h3>{{ movie.title }}</h3>
           </div>
         </div>
       </div>
     </div>
+
+    <ReviewSection :movie-id="route.params.id" />
+
+    <!-- トレーラーモーダル -->
+    <div v-if="showTrailer" class="trailer-modal" @click="showTrailer = false">
+      <div class="trailer-content" @click.stop>
+        <button class="close-button" @click="showTrailer = false">
+          <span class="mdi mdi-close"></span>
+        </button>
+        <iframe
+          :src="'https://www.youtube.com/embed/' + trailerKey"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import FavoriteButton from '../components/FavoriteButton.vue'
+import { useRatingsStore } from '../stores/ratings'
+import { useHistoryStore } from '../stores/history'
+import ReviewSection from '../components/ReviewSection.vue'
 
 const route = useRoute()
 const router = useRouter()
 const movie = ref(null)
 const similarMovies = ref([])
 const cast = ref([])
+const trailerKey = ref(null)
+const showTrailer = ref(false)
+const ratingsStore = useRatingsStore()
+const userRating = computed(() => ratingsStore.getRating(route.params.id))
+const historyStore = useHistoryStore()
 
 const getImageUrl = (path, size = 'w500') => {
   return path ? `https://image.tmdb.org/t/p/${size}${path}` : '/placeholder.jpg'
@@ -111,9 +161,30 @@ const fetchMovieDetails = async (id) => {
       }
     })
     movie.value = response.data
+    historyStore.addToHistory(response.data)
   } catch (error) {
     console.error('Error fetching movie details:', error)
   }
+}
+
+const fetchTrailer = async (id) => {
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/movie/${id}/videos`, {
+      params: {
+        api_key: import.meta.env.VITE_TMDB_API_KEY,
+        language: 'ja-JP'
+      }
+    })
+    const videos = response.data.results
+    const trailer = videos.find(video => video.type === 'Trailer') || videos[0]
+    trailerKey.value = trailer?.key
+  } catch (error) {
+    console.error('Error fetching trailer:', error)
+  }
+}
+
+const setRating = (rating) => {
+  ratingsStore.setRating(route.params.id, rating)
 }
 
 const fetchCast = async (id) => {
@@ -153,6 +224,7 @@ watch(() => route.params.id, (newId) => {
     fetchMovieDetails(newId)
     fetchSimilarMovies(newId)
     fetchCast(newId)
+    fetchTrailer(newId)
   }
 })
 
@@ -161,6 +233,7 @@ onMounted(() => {
     fetchMovieDetails(route.params.id)
     fetchSimilarMovies(route.params.id)
     fetchCast(route.params.id)
+    fetchTrailer(route.params.id)
   }
 })
 </script>
@@ -196,19 +269,55 @@ onMounted(() => {
   margin: 0 auto;
 }
 
+.poster-container {
+  position: relative;
+}
+
 .poster {
   width: 300px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
+.detail-favorite-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  transform: scale(1.2);
+}
+
 .info {
   flex: 1;
 }
 
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .info h1 {
   font-size: 2.5rem;
-  margin-bottom: 1rem;
+  margin: 0;
+}
+
+.trailer-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.trailer-button:hover {
+  background: #ff0f1f;
 }
 
 .meta {
@@ -258,6 +367,42 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
+.rating-section {
+  margin-bottom: 2rem;
+}
+
+.rating-section h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #aaa;
+}
+
+.star-rating {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.star-button {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.star-button .mdi {
+  font-size: 1.5rem;
+  color: #666;
+}
+
+.star-button:hover {
+  transform: scale(1.2);
+}
+
+.star-button.active .mdi {
+  color: #ffd700;
+}
+
 .additional-info {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -273,6 +418,42 @@ onMounted(() => {
 
 .info-item p {
   font-size: 1.1rem;
+}
+
+.trailer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.trailer-content {
+  position: relative;
+  width: 90%;
+  max-width: 1000px;
+  aspect-ratio: 16/9;
+}
+
+.close-button {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.trailer-content iframe {
+  width: 100%;
+  height: 100%;
 }
 
 .cast-section,
@@ -373,8 +554,16 @@ onMounted(() => {
     width: 200px;
   }
 
+  .title-section {
+    flex-direction: column;
+  }
+
   .meta,
   .genres {
+    justify-content: center;
+  }
+
+  .star-rating {
     justify-content: center;
   }
 
@@ -405,6 +594,10 @@ onMounted(() => {
   .cast-section,
   .similar-section {
     padding: 1rem;
+  }
+
+  .trailer-content {
+    width: 100%;
   }
 }
 </style> 
